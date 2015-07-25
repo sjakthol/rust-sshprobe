@@ -34,9 +34,24 @@ pub fn read_line(stream: &TcpStream, limit: usize) -> std::io::Result<String> {
   Err(Error::new(ErrorKind::Other, "Unexpected end of stream."))
 }
 
+/// Reads four bytes from the stream and combines them together to form a 32 bit
+/// unsigned integer.
+pub fn read_u32(stream: &TcpStream) -> std::io::Result<u32> {
+  let mut buf: Vec<u8> = vec![];
+  let read = try!(stream.take(4).read_to_end(&mut buf));
+
+  if read < 4 {
+    return Err(Error::new(ErrorKind::Other, "Unexpected end of stream."));
+  }
+
+  Ok(buf.iter().enumerate().fold(0, |result, (i, value)| {
+    result | ((*value as u32) << (3 - i) * 8)
+  }))
+}
+
 #[cfg(test)]
 mod tests {
-  use super::read_line;
+  use super::*;
   use test::create_tcp_stream;
 
   #[test]
@@ -98,5 +113,23 @@ mod tests {
   fn test_readline_only_lf() {
     let stream = create_tcp_stream("\n".as_bytes());
     assert!(read_line(&stream, 255).is_err());
+  }
+
+  #[test]
+  fn test_read_u32_basic() {
+    let stream = create_tcp_stream(&[0x29, 0xb7, 0xf4, 0xaa, 0xff, 0xff]);
+    assert_eq!(read_u32(&stream).unwrap(), 0x29b7f4aa);
+  }
+
+  #[test]
+  fn test_read_u32_basic_zeroes() {
+    let stream = create_tcp_stream(&[0x29, 0x00, 0xf4, 0xaa, 0xff, 0xff]);
+    assert_eq!(read_u32(&stream).unwrap(), 0x2900f4aa);
+  }
+
+  #[test]
+  fn test_read_u32_too_little_data() {
+    let stream = create_tcp_stream(&[0x29, 0xb7, 0xf4]);
+    assert!(read_u32(&stream).is_err());
   }
 }
