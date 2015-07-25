@@ -1,11 +1,10 @@
 use std;
 use std::io::prelude::*;
 use std::io::{Error, ErrorKind};
-use std::net::TcpStream;
 
 /// Reads bytes from the TCP stream until CRLF is found or the given limit is
 /// reached.
-pub fn read_line(stream: &TcpStream, limit: usize) -> std::io::Result<String> {
+pub fn read_line<T: Read>(stream: T, limit: usize) -> std::io::Result<String> {
   let mut result = String::with_capacity(limit);
 
   for byte in stream.take(limit as u64).bytes() {
@@ -38,7 +37,7 @@ pub fn read_line(stream: &TcpStream, limit: usize) -> std::io::Result<String> {
 
 /// Reads the given number of bytes from the stream into a Vec<u8> or returns
 /// an error if the exact number of bytes cannot be read.
-pub fn read_bytes(stream: &TcpStream, amount: usize) -> std::io::Result<Vec<u8>> {
+pub fn read_bytes<T: Read>(stream: T, amount: usize) -> std::io::Result<Vec<u8>> {
   let mut buf: Vec<u8> = vec![];
   let read = try!(stream.take(amount as u64).read_to_end(&mut buf));
 
@@ -51,7 +50,7 @@ pub fn read_bytes(stream: &TcpStream, amount: usize) -> std::io::Result<Vec<u8>>
 
 /// Reads four bytes from the stream and combines them together to form a 32 bit
 /// unsigned integer.
-pub fn read_u32(stream: &TcpStream) -> std::io::Result<u32> {
+pub fn read_u32<T: Read>(stream: T) -> std::io::Result<u32> {
   let buf = try!(read_bytes(stream, 4));
 
   Ok(buf.iter().enumerate().fold(0, |result, (i, value)| {
