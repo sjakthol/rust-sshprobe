@@ -1,0 +1,4 @@
+[package]
+name = "sshprobe"
+version = "0.1.0"
+authors = ["Sami Jaktholm <sjakthol@outlook.com>"]
