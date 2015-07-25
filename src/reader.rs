@@ -1,37 +1,39 @@
 use std;
+use std::io::prelude::*;
 use std::io::{Error, ErrorKind};
-use std::io::Read;
 use std::net::TcpStream;
 
 /// Reads bytes from the TCP stream until CRLF is found or the given limit is
 /// reached.
 pub fn read_line(stream: &TcpStream, limit: usize) -> std::io::Result<String> {
-  let mut res = vec!();
-  for (i, value) in stream.bytes().enumerate() {
-    let byte = try!(value);
-    if byte == '\n' as u8 {
-      // The end of the line. Make sure it actually was CRLF.
-      let second_to_last = res.pop().unwrap_or(0);
-      if second_to_last != '\r' as u8 {
-        return Err(Error::new(ErrorKind::Other, "LF without CR."));
-      }
+  let mut result = String::with_capacity(limit);
 
-      return match String::from_utf8(res) {
-        Ok(s) => Ok(s),
-        Err(_) => Err(Error::new(ErrorKind::Other, "Invalid UTF8.")),
-      }
-    }
+  for byte in stream.take(limit as u64).bytes() {
+    let raw = try!(byte);
+    let chr = raw as char;
 
-    // Add the byte to this line.
-    res.push(byte);
+    result.push(chr);
 
-    // Check the limit.
-    if i == limit {
-      return Err(Error::new(ErrorKind::Other, "Line too long."));
+    if chr == '\n' {
+      break;
     }
   }
 
-  Err(Error::new(ErrorKind::Other, "Unexpected end of stream."))
+  if result.ends_with("\r\n") {
+    // .truncate() panics if the new length is not at char boundary. Since we
+    // know the string ends with \r\n, that won't happen.
+    let new_len = result.len() - 2;
+    result.truncate(new_len);
+
+    // Return the result.
+    Ok(result)
+  } else if result.len() == limit {
+    // The line did not fit in the given limit.
+    Err(Error::new(ErrorKind::Other, "Line too long."))
+  } else {
+    // The line ending was invalid or missing.
+    Err(Error::new(ErrorKind::Other, "The line must end in CRLF sequence."))
+  }
 }
 
 /// Reads four bytes from the stream and combines them together to form a 32 bit
