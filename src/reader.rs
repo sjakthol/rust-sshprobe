@@ -36,15 +36,23 @@ pub fn read_line(stream: &TcpStream, limit: usize) -> std::io::Result<String> {
   }
 }
 
+/// Reads the given number of bytes from the stream into a Vec<u8> or returns
+/// an error if the exact number of bytes cannot be read.
+pub fn read_bytes(stream: &TcpStream, amount: usize) -> std::io::Result<Vec<u8>> {
+  let mut buf: Vec<u8> = vec![];
+  let read = try!(stream.take(amount as u64).read_to_end(&mut buf));
+
+  if read < amount {
+    Err(Error::new(ErrorKind::Other, "Unexpected end of stream."))
+  } else {
+    Ok(buf)
+  }
+}
+
 /// Reads four bytes from the stream and combines them together to form a 32 bit
 /// unsigned integer.
 pub fn read_u32(stream: &TcpStream) -> std::io::Result<u32> {
-  let mut buf: Vec<u8> = vec![];
-  let read = try!(stream.take(4).read_to_end(&mut buf));
-
-  if read < 4 {
-    return Err(Error::new(ErrorKind::Other, "Unexpected end of stream."));
-  }
+  let mut buf = try!(read_bytes(stream, 4));
 
   Ok(buf.iter().enumerate().fold(0, |result, (i, value)| {
     result | ((*value as u32) << (3 - i) * 8)
@@ -133,5 +141,19 @@ mod tests {
   fn test_read_u32_too_little_data() {
     let stream = create_tcp_stream(&[0x29, 0xb7, 0xf4]);
     assert!(read_u32(&stream).is_err());
+  }
+
+  #[test]
+  fn test_read_bytes_basic() {
+    let stream = create_tcp_stream(&[1,2,3,4,5,6]);
+    assert_eq!(read_bytes(&stream, 2).unwrap(), [1,2]);
+    assert_eq!(read_bytes(&stream, 3).unwrap(), [3,4,5]);
+    assert_eq!(read_bytes(&stream, 1).unwrap(), [6]);
+  }
+
+  #[test]
+  fn test_read_bytes_too_little_data() {
+    let stream = create_tcp_stream(&[1,2,3,4,5,6]);
+    assert!(read_bytes(&stream, 10).is_err())
   }
 }
