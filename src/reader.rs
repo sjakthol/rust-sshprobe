@@ -35,6 +35,11 @@ pub fn read_line<T: Read>(stream: T, limit: usize) -> std::io::Result<String> {
   }
 }
 
+/// Reads a single by from the stream.
+pub fn read_byte<T: Read>(stream: T) -> std::io::Result<u8> {
+  Ok(try!(read_bytes(stream, 1)).pop().unwrap())
+}
+
 /// Reads the given number of bytes from the stream into a Vec<u8> or returns
 /// an error if the exact number of bytes cannot be read.
 pub fn read_bytes<T: Read>(stream: T, amount: usize) -> std::io::Result<Vec<u8>> {
@@ -154,5 +159,19 @@ mod tests {
   fn test_read_bytes_too_little_data() {
     let stream = create_tcp_stream(&[1,2,3,4,5,6]);
     assert!(read_bytes(&stream, 10).is_err())
+  }
+
+  #[test]
+  fn test_read_byte_basic() {
+    let stream = create_tcp_stream(&[1,2,3,4,5,6]);
+    assert_eq!(read_byte(&stream).unwrap(), 1);
+    assert_eq!(read_byte(&stream).unwrap(), 2);
+    assert_eq!(read_byte(&stream).unwrap(), 3);
+  }
+
+  #[test]
+  fn test_read_byte_empty() {
+    let stream = create_tcp_stream(&[]);
+    assert!(read_byte(&stream).is_err())
   }
 }
