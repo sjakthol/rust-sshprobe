@@ -52,7 +52,7 @@ pub fn read_bytes(stream: &TcpStream, amount: usize) -> std::io::Result<Vec<u8>>
 /// Reads four bytes from the stream and combines them together to form a 32 bit
 /// unsigned integer.
 pub fn read_u32(stream: &TcpStream) -> std::io::Result<u32> {
-  let mut buf = try!(read_bytes(stream, 4));
+  let buf = try!(read_bytes(stream, 4));
 
   Ok(buf.iter().enumerate().fold(0, |result, (i, value)| {
     result | ((*value as u32) << (3 - i) * 8)
