@@ -3,8 +3,14 @@ extern crate sshprobe;
 use std::env;
 use std::io::prelude::*;
 use std::net::TcpStream;
-use sshprobe::read_identifier;
+use sshprobe::{read_identifier, read_kex_payload};
 use sshprobe::socket::get_peer_addr;
+
+fn print_algolist(l: Vec<String>) {
+  for a in l.iter() {
+    println!("  {}", a)
+  }
+}
 
 fn main() {
   let mut args = env::args();
@@ -30,4 +36,29 @@ fn main() {
 
   let res = read_identifier(&stream).unwrap();
   println!("[Remote] Version: {}", res);
+
+  let kex_payload = read_kex_payload(&stream).unwrap();
+  println!("Key Exchange Algorithms:");
+  print_algolist(kex_payload.key_exchange);
+
+  println!("Host Keys:");
+  print_algolist(kex_payload.host_keys);
+
+  println!("Encryption (client -> server):");
+  print_algolist(kex_payload.encryption_cts);
+
+  println!("Encryption (server -> client):");
+  print_algolist(kex_payload.encryption_stc);
+
+  println!("MAC (client -> server):");
+  print_algolist(kex_payload.mac_cts);
+
+  println!("MAC (server -> client):");
+  print_algolist(kex_payload.mac_stc);
+
+  println!("Compression (client -> server):");
+  print_algolist(kex_payload.compression_cts);
+
+  println!("Compression (server -> client):");
+  print_algolist(kex_payload.compression_stc);
 }
