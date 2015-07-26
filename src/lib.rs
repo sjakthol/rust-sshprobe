@@ -54,10 +54,12 @@ pub struct KexData {
 pub fn read_kex_payload(stream: &TcpStream) -> std::io::Result<KexData> {
   // RFC 4253, section 6.
   let packet_len = try!(read_u32(stream)) as usize;
-
   if packet_len > 35000 {
     return Err(Error::new(ErrorKind::Other, "Packet too large."));
   }
+
+  // byte      padding_length
+  let _ = try!(read_byte(stream));
 
   // TODO: Do bounds checking on payload length.
 
